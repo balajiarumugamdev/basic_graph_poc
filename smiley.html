@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Canvas Smiley Face</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #f0f0f0;
+      margin: 0;
+    }
+    canvas {
+      border: 2px solid #333;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="myCanvas" width="150" height="150"></canvas>
+
+  <script>
+    const canvas = document.getElementById('myCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Draw face (yellow circle)
+    ctx.beginPath();
+    ctx.arc(75, 75, 50, 0, Math.PI * 2, true);
+    ctx.fillStyle = 'yellow';
+    ctx.fill();
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Draw eyes (black circles)
+    ctx.beginPath();
+    ctx.arc(55, 60, 7, 0, Math.PI * 2, true); // Left eye
+    ctx.arc(95, 60, 7, 0, Math.PI * 2, true); // Right eye
+    ctx.fillStyle = 'black';
+    ctx.fill();
+
+    // Draw mouth (smile arc)
+    ctx.beginPath();
+    ctx.arc(75, 85, 15, 0, Math.PI, false);
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+  </script>
+
+</body>
+</html>

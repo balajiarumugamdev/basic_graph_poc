@@ -1,0 +1,79 @@
+body {
+    font-family: sans-serif;
+    padding: 30px;
+    background: #f9f9f9;
+  }
+
+  h2 {
+    text-align: center;
+  }
+
+  .chart-wrapper {
+    position: relative;
+    width: 600px;
+    height: 400px;
+    margin: 0 auto;
+    border-left: 2px solid #333;
+    border-bottom: 2px solid #333;
+    background: white;
+  }
+
+  canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+
+  .x-labels, .y-labels {
+    position: absolute;
+    font-size: 12px;
+    color: #555;
+  }
+
+  .x-labels {
+    bottom: -20px;
+    left: 40px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .y-labels {
+    top: 10px;
+    left: -40px;
+    height: 100%;
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: space-between;
+  }
+
+  .tooltip {
+    position: absolute;
+    background: #333;
+    color: #fff;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .axis-label-x, .axis-label-y {
+    font-weight: bold;
+    font-size: 14px;
+    position: absolute;
+  }
+
+  .axis-label-x {
+    bottom: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .axis-label-y {
+    top: 50%;
+    left: -60px;
+    transform: translateY(-50%) rotate(-90deg);
+  }

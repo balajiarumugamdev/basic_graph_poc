@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Monthly Sales Line Chart</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+
+  <h2>Monthly Sales Overview</h2>
+
+  <div class="chart-wrapper" id="chartWrapper">
+    <canvas width="600" height="400"></canvas>
+    <div class="x-labels" id="xLabels"></div>
+    <div class="y-labels" id="yLabels"></div>
+    <div class="tooltip" id="tooltip"></div>
+    <div class="axis-label-x">Months</div>
+    <div class="axis-label-y">Sales ($)</div>
+  </div>
+
+  <script>
+    const data = [
+      { label: 'Jan', value: 40 },
+      { label: 'Feb', value: 55 },
+      { label: 'Mar', value: 30 },
+      { label: 'Apr', value: 80 },
+      { label: 'May', value: 60 },
+      { label: 'Jun', value: 90 },
+      { label: 'Jul', value: 70 }
+    ];
+
+    const canvas = document.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
+    console.log('ctx', ctx);
+    const tooltip = document.getElementById('tooltip');
+    const chartWrapper = document.getElementById('chartWrapper');
+
+    const padding = 50;
+    const width = canvas.width - padding * 2;
+    const height = canvas.height - padding * 2;
+
+    const maxVal = Math.max(...data.map(d => d.value));
+    const step = 20;
+    const ySteps = Math.ceil(maxVal / step);
+    const xStep = width / (data.length - 1);
+
+    // Translate for padding
+    ctx.translate(padding, padding);
+
+    // Draw grid lines
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= ySteps; i++) {
+      const y = height - (i * (height / ySteps));
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    // Plot line
+    ctx.beginPath();
+    data.forEach((d, i) => {
+      const x = i * xStep;
+      const y = height - (d.value / maxVal * height);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = 'tomato';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Plot points
+    const points = [];
+    data.forEach((d, i) => {
+      const x = i * xStep;
+      const y = height - (d.value / maxVal * height);
+      points.push({ x, y, label: d.label, value: d.value });
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = 'tomato';
+      ctx.fill();
+    });
+
+    // X-axis labels
+    const xLabels = document.getElementById('xLabels');
+    data.forEach(d => {
+      const div = document.createElement('div');
+      div.textContent = d.label;
+      xLabels.appendChild(div);
+    });
+
+    // Y-axis labels
+    const yLabels = document.getElementById('yLabels');
+    for (let i = 0; i <= ySteps; i++) {
+      const div = document.createElement('div');
+      div.textContent = i * step;
+      yLabels.appendChild(div);
+    }
+
+    // Tooltip logic
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left - padding;
+      const mouseY = e.clientY - rect.top - padding;
+
+      let found = false;
+      for (let pt of points) {
+        const dx = pt.x - mouseX;
+        const dy = pt.y - mouseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 8) {
+          tooltip.style.left = `${pt.x + padding + 10}px`;
+          tooltip.style.top = `${pt.y + padding - 30}px`;
+          tooltip.textContent = `${pt.label}: $${pt.value}`;
+          tooltip.style.opacity = 1;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        tooltip.style.opacity = 0;
+      }
+    });
+  </script>
+
+</body>
+</html>
