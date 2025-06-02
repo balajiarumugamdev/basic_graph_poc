@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>D3 Bar Chart</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+      }
+      #chart-container {
+        width: 100%;
+        height: 60vh;
+        position: relative;
+        background-color: #f0f0f0;
+      }
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="chart-container">
+      <svg></svg>
+    </div>
+
+    <!---    
+        1. We use #chart-container to wrap the SVG and control layout.
+        2. The svg will contain the visual representation of our chart.
+        3. We use width: 100% and height: 60vh to make the chart responsive.
+    -->
+
+    <!--Step 5.2.1 Add ToolTip Element -->
+    <div
+      id="tooltip"
+      style="
+        position: absolute;
+        padding: 5px 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        font-size: 12px;
+        border-radius: 4px;
+        pointer-events: none;
+        visibility: hidden;
+      "
+    ></div>
+
+    <select id="category-filter">
+      <option value="all">All</option>
+      <option value="A">A</option>
+      <option value="B">B</option>
+      <!-- add all categories -->
+    </select>
+
+    <select id="sort-order">
+      <option value="category">Sort by Category</option>
+      <option value="value">Sort by Value</option>
+    </select>
+    <script>
+      /* Step 2: Setup Chart Dimensions and SVG Groups*/
+      const svg = d3.select("svg");
+      /*    Uses D3's selection API to find the first <svg> element in the DOM.
+            Returns a D3 selection object, which wraps the native DOM element and gives you D3’s powerful methods (like .append(), .attr(), .style(), etc). */
+
+      const container = document.getElementById("chart-container");
+
+      // Define margins
+      const margin = { top: 40, right: 30, bottom: 50, left: 60 };
+
+      const width = container.clientWidth - margin.left - margin.right;
+      const height = container.clientHeight - margin.top - margin.bottom;
+
+      /*
+        clientWidth and clientHeight are read-only properties on DOM elements (like a <div>) that tell you the visible size of an element inside the padding, but excluding borders and scrollbars. 
+        clientWidth/Height - The inner width/height of the element (content + padding, no border/scroll)
+        */
+      const g = svg
+        .append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
+      /*  append() adds a new element to the DOM, inside the selected element.
+            attr(name, value) sets an attribute on the selected element(s), like width, height, fill, transform, etc.
+        */
+      /*  g is where we’ll draw bars, axes, and grid lines.
+            This keeps the chart aligned and avoids clipping axes/labels/*/
+
+      /*Step 3: Generate Sample Data and Draw Bars */
+      /* 3.1. Generate sample data*/
+      const data = [
+        { category: "A", value: 30 },
+        { category: "B", value: 80 },
+        { category: "C", value: 45 },
+        { category: "D", value: 60 },
+        { category: "E", value: 20 },
+        { category: "F", value: 90 },
+        { category: "G", value: 55 },
+      ];
+      //3.2. Create scales to map data to screen coordinates
+      //We’ll use D3’s scaleBand for the X-axis (categorical) and scaleLinear for the Y-axis (numerical).
+      const x = d3
+        .scaleBand()
+        .domain(data.map((d) => d.category)) // All category names
+        .range([0, width]) // Spread across available width
+        .padding(0.2);
+
+      const y = d3
+        .scaleLinear()
+        .domain([0, d3.max(data, (d) => d.value)]) // From 0 to max value
+        .range([height, 0]); // SVG Y is top-down, so invert
+      /*
+        | Term     | Meaning                                               |
+        | -------- | ----------------------------------------------------- |
+        | `domain` | The **input** values (your real data)                 |
+        | `range`  | The **output** values (pixel positions on the screen) |
+*/
+      //3.3 Append rect elements (bars) using D3’s data-binding
+      // g.selectAll("rect")
+      //   .data(data)
+      //   .enter()
+      //   .append("rect")
+      //   .attr("x", (d) => x(d.category))
+      //   .attr("y", (d) => y(d.value))
+      //   .attr("width", x.bandwidth())
+      //   .attr("height", (d) => height - y(d.value))
+      //   .attr("fill", "#69b3a2");
+      /*
+        | Part                 | Meaning                                                                |
+        | -------------------- | ---------------------------------------------------------------------- |
+        | `.data(data)`        | Binds the array of data to the upcoming elements                       |
+        | `.enter()`           | Creates a placeholder for each data point that doesn’t have a DOM node |
+        | `.append("rect")`    | Adds a rectangle for each data item                                    |
+        | `.attr("x", …)`      | Horizontal position based on category                                  |
+        | `.attr("y", …)`      | Top of the bar (inverted Y-axis)                                       |
+        | `.attr("width", …)`  | Bar width from scaleBand                                               |
+        | `.attr("height", …)` | Height calculated from value                                           |
+*/
+
+      /*4. Add axes */
+      //  D3 provides functions to generate axes based on your scales:
+      /*
+        | Axis   | D3 Function       | Typically used with...   |
+        | ------ | ----------------- | ------------------------ |
+        | X-axis | `d3.axisBottom()` | `scaleBand` (categories) |
+        | Y-axis | `d3.axisLeft()`   | `scaleLinear` (numbers)  |
+        */
+      /*Step 4.1: Create Axes*/
+      const xAxis = d3.axisBottom(x);
+      const yAxis = d3.axisLeft(y);
+      /*
+        xAxis will display category names (horizontal axis)
+        yAxis will display numeric ticks (vertical axis)
+        */
+
+      /*Step 4.2: Append Axes to the SVG*/
+      // Add X Axis
+      g.append("g")
+        .attr("transform", `translate(0,${height})`) // Move to bottom
+        .call(xAxis);
+
+      // Add Y Axis
+      g.append("g").call(yAxis);
+
+      //.call() is how you apply an axis generator to an existing group (<g>) element.
+
+      //Step 5: Add Smooth Transitions, Tooltips, and Interactivity
+      // Step 5.1 Add Transitions to Bars
+      // g.selectAll("rect")
+      //   .data(data)
+      //   .enter()
+      //   .append("rect")
+      //   .attr("x", (d) => x(d.category))
+      //   .attr("y", height) // Start at bottom
+      //   .attr("width", x.bandwidth())
+      //   .attr("height", 0) // Start with 0 height
+      //   .attr("fill", "#69b3a2")
+      //   .transition()
+      //   .duration(800)
+      //   .attr("y", (d) => y(d.value))
+      //   .attr("height", (d) => height - y(d.value));
+
+      //Step 5.2 Add Tooltips on Hover
+
+      //Step 5.2.2 Add Tooltip Logic in D3
+      const tooltip = d3.select("#tooltip");
+
+      g.selectAll("rect")
+        .data(data)
+        .enter()
+        .append("rect")
+        .attr("x", (d) => x(d.category))
+        .attr("y", height)
+        .attr("width", x.bandwidth())
+        .attr("height", 0)
+        .attr("fill", "#69b3a2")
+        .on("mouseover", function (event, d) {
+          tooltip.style("visibility", "visible").text(`Value: ${d.value}`);
+          d3.select(this).attr("fill", "#40a9f3");
+        })
+        .on("mousemove", function (event) {
+          tooltip
+            .style("top", event.pageY - 30 + "px")
+            .style("left", event.pageX + 10 + "px");
+        })
+        .on("mouseout", function () {
+          tooltip.style("visibility", "hidden");
+          d3.select(this).attr("fill", "#69b3a2");
+        })
+        .transition()
+        .duration(800)
+        .attr("y", (d) => y(d.value))
+        .attr("height", (d) => height - y(d.value));
+      /*
+        | Feature            | What it does                     |
+        | ------------------ | -------------------------------- |
+        | `.on("mouseover")` | Show tooltip and highlight bar   |
+        | `.on("mousemove")` | Move tooltip with cursor         |
+        | `.on("mouseout")`  | Hide tooltip and reset bar color |
+        | `transition()`     | Animate bar appearance           |
+        */
+      //Step 6: Zoom, Pan, Filter & Sort
+      //6.1 Add Zoom & Pan
+      //6.2 Filter by Category
+      //Add a simple dropdown <select> with categories and filter the bars:
+      d3.select("#category-filter").on("change", function () {
+        const selected = this.value;
+        const filteredData =
+          selected === "all"
+            ? data
+            : data.filter((d) => d.category === selected);
+
+        updateChart(filteredData);
+      });
+
+      //updateChart is a function that re-binds data and redraws bars and axes based on filtered data.
+      d3.select("#sort-order").on("change", function () {
+        const sortBy = this.value;
+        let sortedData;
+
+        if (sortBy === "value") {
+          sortedData = [...data].sort((a, b) => b.value - a.value);
+        } else {
+          sortedData = [...data].sort((a, b) =>
+            d3.ascending(a.category, b.category)
+          );
+        }
+
+        updateChart(sortedData);
+      });
+
+      //6.4 The updateChart Function
+      //This function takes new data, updates scales, axes, and bars with smooth transitions.
+      function updateChart(newData) {
+        // Update scales domain with newData
+        x.domain(newData.map((d) => d.category));
+        y.domain([0, d3.max(newData, (d) => d.value)]);
+
+        // Update axes
+        g.select(".x-axis").transition().duration(500).call(d3.axisBottom(x));
+
+        g.select(".y-axis").transition().duration(500).call(d3.axisLeft(y));
+
+        // Bind new data to bars
+        const bars = g.selectAll("rect").data(newData, (d) => d.category);
+
+        // Exit old bars
+        bars
+          .exit()
+          .transition()
+          .duration(500)
+          .attr("height", 0)
+          .attr("y", height)
+          .remove();
+
+        // Update existing bars
+        bars
+          .transition()
+          .duration(500)
+          .attr("x", (d) => x(d.category))
+          .attr("y", (d) => y(d.value))
+          .attr("width", x.bandwidth())
+          .attr("height", (d) => height - y(d.value));
+
+        // Enter new bars
+        bars
+          .enter()
+          .append("rect")
+          .attr("x", (d) => x(d.category))
+          .attr("y", height)
+          .attr("width", x.bandwidth())
+          .attr("height", 0)
+          .attr("fill", "#69b3a2")
+          .transition()
+          .duration(500)
+          .attr("y", (d) => y(d.value))
+          .attr("height", (d) => height - y(d.value));
+      }
+    </script>
+  </body>
+</html>

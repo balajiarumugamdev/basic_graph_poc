@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Responsive D3 Bar Chart</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0 10px;
+    }
+    #chart-container {
+      width: 100%;
+      height: 60vh; /* responsive height */
+      max-height: 500px;
+      position: relative;
+    }
+    svg {
+      width: 100%;
+      height: 100%;
+      background: #f8f8f8;
+      display: block;
+    }
+    button, select {
+      margin: 5px;
+      padding: 5px 10px;
+    }
+    .tooltip {
+      position: absolute;
+      background: #333;
+      color: #fff;
+      padding: 5px 8px;
+      font-size: 12px;
+      border-radius: 4px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+      z-index: 10;
+    }
+    .grid line {
+      stroke: #ccc;
+      stroke-opacity: 0.5;
+      shape-rendering: crispEdges;
+    }
+  </style>
+</head>
+<body>
+  <button onclick="update()">Update Data</button>
+  <button onclick="toggleSort()">Toggle Sort</button>
+  <select id="categoryFilter" onchange="filterByCategory()">
+    <option value="all">All</option>
+  </select>
+
+  <div id="chart-container">
+    <svg></svg>
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+
+  <script>
+    const svg = d3.select("svg");
+    const tooltip = d3.select("#tooltip");
+    const container = document.getElementById("chart-container");
+
+    const margin = { top: 40, right: 20, bottom: 60, left: 60 };
+
+    let width, height, innerWidth, innerHeight;
+
+    const zoomLayer = svg.append("g");
+    let g = zoomLayer.append("g");
+
+    const xScale = d3.scaleBand().padding(0.1);
+    const yScale = d3.scaleLinear();
+
+    let xAxisGroup = g.append("g");
+    let yAxisGroup = g.append("g");
+    let yGrid = g.append("g").attr("class", "grid");
+
+    let data = [];
+    let currentSortAsc = true;
+    let currentFilter = "all";
+
+    const categories = ["Fruit", "Vegetable", "Grain"];
+
+    function generateData() {
+      return Array.from({ length: 10 }, (_, i) => ({
+        label: `Item ${i + 1}`,
+        value: Math.floor(Math.random() * 100),
+        category: categories[i % categories.length]
+      }));
+    }
+
+    function updateCategoryFilterOptions(data) {
+      const unique = new Set(data.map(d => d.category));
+      const select = document.getElementById("categoryFilter");
+      select.innerHTML = `<option value="all">All</option>`;
+      unique.forEach(cat => {
+        select.innerHTML += `<option value="${cat}">${cat}</option>`;
+      });
+    }
+
+    function updateDimensions() {
+      width = container.clientWidth;
+      height = container.clientHeight;
+      innerWidth = width - margin.left - margin.right;
+      innerHeight = height - margin.top - margin.bottom;
+
+      svg
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("preserveAspectRatio", "xMidYMid meet");
+
+      zoomLayer.attr("transform", `translate(0,0)`);
+      g.attr("transform", `translate(${margin.left},${margin.top})`);
+
+      // Move axis groups to correct positions on resize
+      if (xAxisGroup) xAxisGroup.attr("transform", `translate(0,${innerHeight})`);
+    }
+
+    function render(dataToRender) {
+      updateDimensions();
+
+      xScale.domain(dataToRender.map(d => d.label)).range([0, innerWidth]);
+      yScale.domain([0, d3.max(dataToRender, d => d.value)]).range([innerHeight, 0]);
+
+      // BIND DATA
+      const bars = g.selectAll("rect").data(dataToRender, d => d.label);
+
+      bars.exit().remove();
+
+      bars.enter().append("rect")
+        .attr("fill", "steelblue")
+        .attr("x", d => xScale(d.label))
+        .attr("y", yScale(0))
+        .attr("width", xScale.bandwidth())
+        .attr("height", 0)
+        .on("mouseover", function (event, d) {
+          d3.select(this).attr("fill", "orange");
+          tooltip
+            .style("opacity", 1)
+            .html(`<strong>${d.label}</strong><br>Value: ${d.value}<br>Category: ${d.category}`)
+            .style("left", `${event.pageX + 10}px`)
+            .style("top", `${event.pageY - 28}px`);
+        })
+        .on("mousemove", function (event) {
+          tooltip
+            .style("left", `${event.pageX + 10}px`)
+            .style("top", `${event.pageY - 28}px`);
+        })
+        .on("mouseout", function () {
+          d3.select(this).attr("fill", "steelblue");
+          tooltip.style("opacity", 0);
+        })
+        .merge(bars)
+        .transition().duration(750)
+        .attr("x", d => xScale(d.label))
+        .attr("y", d => yScale(d.value))
+        .attr("width", xScale.bandwidth())
+        .attr("height", d => innerHeight - yScale(d.value));
+
+      // Labels
+      const labels = g.selectAll(".label").data(dataToRender, d => d.label);
+
+      labels.enter().append("text")
+        .attr("class", "label")
+        .merge(labels)
+        .transition().duration(750)
+        .attr("x", d => xScale(d.label) + xScale.bandwidth() / 2)
+        .attr("y", d => yScale(d.value) - 5)
+        .attr("text-anchor", "middle")
+        .text(d => d.value);
+
+      labels.exit().remove();
+
+      // Axes
+      const xAxis = d3.axisBottom(xScale);
+      const yAxis = d3.axisLeft(yScale).ticks(5);
+
+      xAxisGroup.transition().duration(750).call(xAxis).selectAll("text")
+        .attr("transform", "rotate(-40)")
+        .style("text-anchor", "end");
+
+      yAxisGroup.transition().duration(750).call(yAxis);
+
+      // Gridlines
+      yGrid.call(d3.axisLeft(yScale).tickSize(-innerWidth).tickFormat(''))
+        .selectAll("line")
+        .attr("stroke", "#ccc")
+        .attr("stroke-opacity", 0.5);
+    }
+
+    function update() {
+      data = generateData();
+      updateCategoryFilterOptions(data);
+      filterByCategory();
+    }
+
+    function toggleSort() {
+      currentSortAsc = !currentSortAsc;
+      const filtered = getFilteredData();
+      const sorted = filtered.sort((a, b) => currentSortAsc ? a.value - b.value : b.value - a.value);
+      render(sorted);
+    }
+
+    function filterByCategory() {
+      currentFilter = document.getElementById("categoryFilter").value;
+      const filtered = getFilteredData();
+      render(filtered);
+    }
+
+    function getFilteredData() {
+      return currentFilter === "all"
+        ? [...data]
+        : data.filter(d => d.category === currentFilter);
+    }
+
+    // Initial render
+    update();
+
+    // Zoom and pan
+    const zoom = d3.zoom()
+      .scaleExtent([1, 5])
+      .translateExtent([[0, 0], [width, height]])
+      .on("zoom", function (event) {
+        zoomLayer.attr("transform", event.transform);
+      });
+
+    svg.call(zoom);
+
+    // Handle resize
+    window.addEventListener("resize", () => {
+      const filtered = getFilteredData();
+      render(filtered);
+    });
+
+  </script>
+</body>
+</html>
